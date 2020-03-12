@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Figgle;
 using Newtonsoft.Json;
+using Internal.ReadLine;
 
 /*
  * CLTrader - Command Line Trading Client for Pseudo Markets
@@ -18,7 +20,7 @@ namespace CLTrader
         public static string BASE_URL = "https://app.pseudomarkets.live";
         private static string username = "";
         private static string token = "";
-        
+
         public static void Main(string[] args)
         {
             Console.WriteLine(FiggleFonts.Standard.Render("CLTrader"));
@@ -41,7 +43,7 @@ namespace CLTrader
             Console.Write("Enter username: ");
             username = Console.ReadLine();
             Console.Write("Enter password: ");
-            string password = Console.ReadLine();
+            string password = ReadLine.ReadPassword();
             LoginInput loginInput = new LoginInput()
             {
                 username = username,
@@ -86,7 +88,7 @@ namespace CLTrader
                 case "3":
                     GetSmartQuote();
                     break;
-                case "4": 
+                case "4":
                     ExecuteTrade();
                     break;
                 case "5":
@@ -102,52 +104,268 @@ namespace CLTrader
 
         public static void GetIndices()
         {
-            Console.WriteLine("Indices here");
+            Console.WriteLine("===========================================");
+            Console.WriteLine("US MARKET INDICES" + "\n");
+            var client = new HttpClient();
+            var response = client.GetAsync(BASE_URL + "/api/Quotes/Indices");
+            var responseString = response.Result.Content.ReadAsStringAsync();
+            var resonseJson = JsonConvert.DeserializeObject<IndicesOutput>(responseString.Result);
+            var indices = resonseJson?.indices;
+            foreach (StockIndex index in indices)
+            {
+                Console.WriteLine("INDEX: " + index.name);
+                Console.WriteLine("POINTS: " + index.points + "\n");
+            }
+            Console.WriteLine("===========================================");
+            Console.WriteLine("Enter to return back to menu...");
+            Console.ReadKey();
             ClientMenu();
         }
 
         public static void GetQuote()
         {
-            Console.WriteLine("Quotes here");
+            Console.WriteLine("===========================================");
+            Console.WriteLine("LATEST PRICE QUOTE");
+            Console.Write("Enter symbol: ");
+            string input = Console.ReadLine();
+            var client = new HttpClient();
+            var response = client.GetAsync(BASE_URL + "/api/Quotes/LatestPrice/" + input);
+            var responseString = response.Result.Content.ReadAsStringAsync();
+            var responseJson = JsonConvert.DeserializeObject<LatestPriceOutput>(responseString.Result);
+            Console.WriteLine("SYMBOL: " + responseJson.symbol);
+            Console.WriteLine("PRICE: " + responseJson.price);
+            Console.WriteLine("SOURCE: " + responseJson.source);
+            Console.WriteLine("QUOTE TIMESTAMP: " + responseJson.timestamp);
+            Console.WriteLine("===========================================");
+            Console.WriteLine("Enter to return back to menu...");
+            Console.ReadKey();
             ClientMenu();
         }
 
         public static void GetSmartQuote()
         {
-            Console.WriteLine("Smart Quote Here");
+            Console.WriteLine("===========================================");
+            Console.WriteLine("SMART PRICE QUOTE");
+            Console.Write("Enter symbol: ");
+            string input = Console.ReadLine();
+            var client = new HttpClient();
+            var response = client.GetAsync(BASE_URL + "/api/Quotes/SmartQuote/" + input);
+            var responseString = response.Result.Content.ReadAsStringAsync();
+            var responseJson = JsonConvert.DeserializeObject<LatestPriceOutput>(responseString.Result);
+            Console.WriteLine("SYMBOL: " + responseJson.symbol);
+            Console.WriteLine("PRICE: " + responseJson.price);
+            Console.WriteLine("SOURCE: " + responseJson.source);
+            Console.WriteLine("QUOTE TIMESTAMP: " + responseJson.timestamp);
+            Console.WriteLine("===========================================");
+            Console.WriteLine("Enter to return back to menu...");
+            Console.ReadKey();
             ClientMenu();
         }
 
         public static void ExecuteTrade()
         {
-            Console.WriteLine("Trade here");
-            ClientMenu();
+            Console.WriteLine("===========================================");
+            Console.WriteLine("EXECUTE TRADE - PLACE ORDER");
+            Console.Write("Enter symbol: ");
+            string symbol = Console.ReadLine();
+            Console.Write("Order type (BUY/SELL): ");
+            string orderType = Console.ReadLine();
+            Console.Write("Quantity: ");
+            string quantity = Console.ReadLine();
+
+            var quoteClient = new HttpClient();
+            var quoteResponse = quoteClient.GetAsync(BASE_URL + "/api/Quotes/SmartQuote/" + symbol);
+            var quoteResponseString = quoteResponse.Result.Content.ReadAsStringAsync();
+            var quoteJson = JsonConvert.DeserializeObject<LatestPriceOutput>(quoteResponseString.Result);
+
+            Console.WriteLine("ORDER SUMMARY");
+            Console.WriteLine("SYMBOL: " + symbol);
+            Console.WriteLine("QUANTITY: " + quantity);
+            Console.WriteLine("PRICE: " + quoteJson.price);
+            double totalValue = quoteJson.price * Int32.Parse(quantity);
+            Console.WriteLine("TOTAL VALUE: " + totalValue);
+
+            Console.Write("Execute trade? (Y/N): ");
+            string input = Console.ReadLine();
+            if (input == "Y")
+            {
+                TradeExecInput tradeExecInput = new TradeExecInput()
+                {
+                    Token = token,
+                    Symbol = symbol,
+                    Quantity = Int32.Parse(quantity),
+                    Type = orderType
+                };
+                var client = new HttpClient();
+                client.BaseAddress = new Uri(BASE_URL);
+                var request = new HttpRequestMessage(HttpMethod.Post, "/api/Trade/Execute");
+                string jsonRequest = JsonConvert.SerializeObject(tradeExecInput);
+                var stringContent = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+                request.Content = stringContent;
+                var response = client.SendAsync(request);
+                var responseString = response.Result.Content.ReadAsStringAsync();
+                var responseJson = JsonConvert.DeserializeObject<TradeExecOutput>(responseString.Result);
+                Console.WriteLine("===========================================");
+                Console.WriteLine("ORDER SUCCESSFULLY EXECUTED");
+                Console.WriteLine("SYMBOL: " + responseJson.Symbol);
+                Console.WriteLine("PRICE: " + responseJson.Price);
+                Console.WriteLine("QUANTITY: " + responseJson.Quantity);
+                Console.WriteLine("ORDER TYPE: " + responseJson.Type);
+                Console.WriteLine("ORDER ID: " + responseJson.Id);
+                Console.WriteLine("TRANSACTION ID: " + responseJson.TransactionID);
+                Console.WriteLine("ORDER DATE: " + responseJson.Date);
+                Console.WriteLine("===========================================");
+                Console.WriteLine("Enter to return back to menu...");
+                Console.ReadKey();
+                ClientMenu();
+            }
+            else
+            {
+                Console.WriteLine("Order cancelled");
+                ClientMenu();
+            }
         }
 
         public static void ViewPositions()
         {
-            Console.WriteLine("View positions");
+            Console.WriteLine("===========================================");
+            Console.WriteLine("ACCOUNT - POSITIONS" + "\n");
+            AccountViewInput accountViewInput = new AccountViewInput()
+            {
+                token = token
+            };
+            var client = new HttpClient();
+            client.BaseAddress = new Uri(BASE_URL);
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/Account/Positions");
+            string jsonRequest = JsonConvert.SerializeObject(accountViewInput);
+            var stringContent = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+            request.Content = stringContent;
+            var response = client.SendAsync(request);
+            var responseString = response.Result.Content.ReadAsStringAsync();
+            var responseJson = JsonConvert.DeserializeObject<IList<Position>>(responseString.Result);
+            foreach (Position position in responseJson)
+            {
+                Console.WriteLine("SYMBOL: " + position.symbol);
+                Console.WriteLine("QUANTITY: " + position.quantity);
+                Console.WriteLine("INVESTED VALUE: " + position.value + "\n");
+            }
+            Console.WriteLine("===========================================");
+            Console.WriteLine("Enter to return back to menu...");
+            Console.ReadKey();
             ClientMenu();
         }
 
         public static void ViewAccountSummary()
         {
-            Console.WriteLine("View account summary");
+            Console.WriteLine("===========================================");
+            Console.WriteLine("ACCOUNT - SUMMARY" + "\n");
+            AccountViewInput accountViewInput = new AccountViewInput()
+            {
+                token = token
+            };
+            var client = new HttpClient();
+            client.BaseAddress = new Uri(BASE_URL);
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/Account/Summary");
+            string jsonRequest = JsonConvert.SerializeObject(accountViewInput);
+            var stringContent = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+            request.Content = stringContent;
+            var response = client.SendAsync(request);
+            var responseString = response.Result.Content.ReadAsStringAsync();
+            var responseJson = JsonConvert.DeserializeObject<AccountSummaryOutput>(responseString.Result);
+            Console.WriteLine("ACCOUNT BALANCE: " + responseJson.AccountBalance);
+            Console.WriteLine("TOTAL INVESTED VALUE: " + responseJson.TotalInvestedValue);
+            Console.WriteLine("TOTAL CURRENT VALUE: " + responseJson.TotalCurrentValue);
+            Console.WriteLine("INVESTMENT GAIN OR LOSS: " + responseJson.InvestmentGainOrLoss);
+            Console.WriteLine("NUMBER OF POSITIONS: " + responseJson.NumberOfPositions);
+            Console.WriteLine("===========================================");
+            Console.WriteLine("Enter to return back to menu...");
+            Console.ReadKey();
             ClientMenu();
         }
     }
-    
+
     public class LoginOutput
     {
         public int Id { get; set; }
         public int UserID { get; set; }
         public string Token { get; set; }
     }
-    
+
     public class LoginInput
     {
         public string username { get; set; }
         public string password { get; set; }
     }
 
+    public class AccountViewInput
+    {
+        public string token { get; set; }
+    }
+
+    public class IndicesOutput
+    {
+        public List<StockIndex> indices;
+        public string source { get; set; }
+        public DateTime timestamp { get; set; }
+    }
+
+    public class StockIndex
+    {
+        public string name { get; set; }
+        public double points { get; set; }
+    }
+
+    public class LatestPriceOutput
+    {
+        public string symbol { get; set; }
+        public double price { get; set; }
+        public DateTime timestamp { get; set; }
+        public string source { get; set; }
+    }
+
+    public class TradeExecInput
+    {
+        public string Token { get; set; }
+        public string Symbol { get; set; }
+        public int Quantity { get; set; }
+        public string Type { get; set; }
+    }
+
+    public class TradeExecOutput
+    {
+        public int Id { get; set; }
+        public string Symbol { get; set; }
+        public string Type { get; set; }
+        public double Price { get; set; }
+        public int Quantity { get; set; }
+        public DateTime Date { get; set; }
+        public string TransactionID { get; set; }
+    }
+
+
+    public class PositionsOutput
+    {
+        public List<Position> Positions { get; set; }
+    }
+
+    public class Position
+    {
+        public int id { get; set; }
+        public int accountId { get; set; }
+        public int orderId { get; set; }
+        public float value { get; set; }
+        public string symbol { get; set; }
+        public int quantity { get; set; }
+    }
+
+    public class AccountSummaryOutput
+    {
+        public int AccountId { get; set; }
+        public double AccountBalance { get; set; }
+        public double TotalInvestedValue { get; set; }
+        public double TotalCurrentValue { get; set; }
+        public double InvestmentGainOrLoss { get; set; }
+        public int NumberOfPositions { get; set; }
+
+    }
 }
