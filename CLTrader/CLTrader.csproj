@@ -3,6 +3,9 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Authors>Shravan Jambukesan</Authors>
+        <Company>Pseudo Markets</Company>
+        <Copyright>(c) 2020 Pseudo Markets</Copyright>
     </PropertyGroup>
 
     <ItemGroup>
