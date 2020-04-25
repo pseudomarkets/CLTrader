@@ -20,10 +20,11 @@ namespace CLTrader
         public static string BASE_URL = "https://app.pseudomarkets.live";
         private static string username = "";
         private static string token = "";
-
+        private static string VERSION_STRING = "1.0.1";
         public static void Main(string[] args)
         {
             Console.WriteLine(FiggleFonts.Standard.Render("CLTrader"));
+            Console.WriteLine("RELEASE VERSION " + VERSION_STRING);
             Console.WriteLine("(c) 2020 Pseudo Markets");
             Console.WriteLine("https://github.com/PseudoMarkets");
             Console.WriteLine("Connected to: " + BASE_URL);
@@ -238,7 +239,7 @@ namespace CLTrader
                 Console.WriteLine("EXECUTE TRADE - PLACE ORDER");
                 Console.Write("Enter symbol: ");
                 string symbol = Console.ReadLine();
-                Console.Write("Order type (BUY/SELL): ");
+                Console.Write("Order type (BUY/SELL/SELLSHORT): ");
                 string orderType = Console.ReadLine();
                 Console.Write("Quantity: ");
                 string quantity = Console.ReadLine();
@@ -256,7 +257,7 @@ namespace CLTrader
                 Console.WriteLine("TOTAL VALUE: $" + totalValue);
 
                 Console.Write("Execute trade? (Y/N): ");
-                string input = Console.ReadLine();
+                string input = Console.ReadLine()?.ToUpper();
                 if (input == "Y")
                 {
                     TradeExecInput tradeExecInput = new TradeExecInput()
