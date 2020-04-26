@@ -10,7 +10,10 @@ Command Line Trading interface for Pseudo Markets. Built with .NET Core.
 Using the command line trading interface requires a Pseudo Markets account. I will be launching a sign-up page on the main frontend site for this, but once you have signed up all you need to do is sign in with the username and password you created. A user manual will be availble under the wiki.
 
 ## Releases
-Precompiled binaries are available under the Releases tab.
+Official builds are available under the [Releases](https://github.com/pseudomarkets/CLTrader/releases) tab
+
+Nightly builds are also available from [build.shravanj.com](https://build.shravanj.com)
+
 
 ## Screenshots
 
