@@ -20,7 +20,7 @@ namespace CLTrader
         public static string BASE_URL = "https://app.pseudomarkets.live";
         private static string username = "";
         private static string token = "";
-        private static string VERSION_STRING = "1.0.1";
+        private static string VERSION_STRING = "1.0.2";
         public static void Main(string[] args)
         {
             Console.WriteLine(FiggleFonts.Standard.Render("CLTrader"));
@@ -75,8 +75,9 @@ namespace CLTrader
             Console.WriteLine("4. EQUITY/ETF RESEARCH");
             Console.WriteLine("5. EXECUTE TRADE");
             Console.WriteLine("6. VIEW POSITIONS");
-            Console.WriteLine("7. ACCOUNT SUMMARY");
-            Console.WriteLine("8. EXIT");
+            Console.WriteLine("7. VIEW TRANSACTIONS");
+            Console.WriteLine("8. ACCOUNT SUMMARY");
+            Console.WriteLine("9. EXIT");
             Console.Write("Enter selection: ");
             string input = Console.ReadLine();
             switch (input)
@@ -100,9 +101,12 @@ namespace CLTrader
                     ViewPositions();
                     break;
                 case "7":
-                    ViewAccountSummary();
+                    ViewTransactions();
                     break;
                 case "8":
+                    ViewAccountSummary();
+                    break;
+                case "9":
                     break;
                 default:
                     Console.WriteLine("Please enter a valid selection (1 - 8)");
@@ -325,9 +329,11 @@ namespace CLTrader
                 var responseJson = JsonConvert.DeserializeObject<IList<Position>>(responseString.Result);
                 foreach (Position position in responseJson)
                 {
+                    Console.WriteLine("---------------------------------------");
                     Console.WriteLine("SYMBOL: " + position.symbol);
                     Console.WriteLine("QUANTITY: " + position.quantity);
-                    Console.WriteLine("INVESTED VALUE: $" + position.value + "\n");
+                    Console.WriteLine("INVESTED VALUE: $" + position.value);
+                    Console.WriteLine("---------------------------------------" + "\n");
                 }
                 Console.WriteLine("===========================================");
                 Console.WriteLine("Enter to return back to menu...");
@@ -364,6 +370,7 @@ namespace CLTrader
                 Console.WriteLine("TOTAL INVESTED VALUE: $" + responseJson.TotalInvestedValue);
                 Console.WriteLine("TOTAL CURRENT VALUE: $" + responseJson.TotalCurrentValue);
                 Console.WriteLine("INVESTMENT GAIN OR LOSS: $" + responseJson.InvestmentGainOrLoss);
+                Console.WriteLine("INVESTMENT GAIN OR LOSS PERCENTAGE: " + responseJson.InvestmentGainOrLossPercentage + "%");
                 Console.WriteLine("NUMBER OF POSITIONS: " + responseJson.NumberOfPositions);
                 Console.WriteLine("===========================================");
                 Console.WriteLine("Enter to return back to menu...");
@@ -373,6 +380,47 @@ namespace CLTrader
             catch (Exception)
             {
                 Console.WriteLine("Unable to retrieve account summary, please try again later.");
+                ClientMenu();
+            }
+        }
+
+        public static void ViewTransactions()
+        {
+            try
+            {
+                Console.WriteLine("===========================================");
+                Console.WriteLine("ACCOUNT - TRANSACTIONS" + "\n");
+                AccountViewInput accountViewInput = new AccountViewInput()
+                {
+                    token = token
+                };
+                var client = new HttpClient();
+                client.BaseAddress = new Uri(BASE_URL);
+                var request = new HttpRequestMessage(HttpMethod.Post, "/api/Account/Transactions");
+                string jsonRequest = JsonConvert.SerializeObject(accountViewInput);
+                var stringContent = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+                request.Content = stringContent;
+                var response = client.SendAsync(request);
+                var responseString = response.Result.Content.ReadAsStringAsync();
+                var responseJson = JsonConvert.DeserializeObject<IList<Transaction>>(responseString.Result);
+                foreach (Transaction transaction in responseJson)
+                {
+                    Console.WriteLine("---------------------------------------");
+                    Console.WriteLine("TYPE: " + transaction.Type);
+                    Console.WriteLine("SYMBOL: " + transaction.Symbol);
+                    Console.WriteLine("QUANTITY: " + transaction.Quantity);
+                    Console.WriteLine("PRICE: " + transaction.Price);
+                    Console.WriteLine("DATE: " + transaction.Date);
+                    Console.WriteLine("---------------------------------------" + "\n");
+                }
+                Console.WriteLine("===========================================");
+                Console.WriteLine("Enter to return back to menu...");
+                Console.ReadKey();
+                ClientMenu();
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Unable to retrieve positions, please try again later.");
                 ClientMenu();
             }
         }
@@ -474,7 +522,18 @@ namespace CLTrader
         public double TotalInvestedValue { get; set; }
         public double TotalCurrentValue { get; set; }
         public double InvestmentGainOrLoss { get; set; }
+        public double InvestmentGainOrLossPercentage { get; set; }
         public int NumberOfPositions { get; set; }
+    }
 
+    public class Transaction
+    {
+        public int Id { get; set; }
+        public string Symbol { get; set; }
+        public string Type { get; set; }
+        public double Price { get; set; }
+        public int Quantity { get; set; }
+        public DateTime Date { get; set; }
+        public string TransactionID { get; set; }
     }
 }
