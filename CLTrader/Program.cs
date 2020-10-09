@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,26 +18,19 @@ namespace CLTrader
 {
     class Program
     {
-        public static string BASE_URL = "https://app.pseudomarkets.live";
+        public static string BASE_URL = "";
         private static string username = "";
         private static string token = "";
-        private static string VERSION_STRING = "1.0.2";
+        private static string VERSION_STRING = "1.0.3";
         public static void Main(string[] args)
         {
             Console.WriteLine(FiggleFonts.Standard.Render("CLTrader"));
             Console.WriteLine("RELEASE VERSION " + VERSION_STRING);
             Console.WriteLine("(c) 2020 Pseudo Markets");
             Console.WriteLine("https://github.com/PseudoMarkets");
+            BASE_URL = GetActiveAppServer();
             Console.WriteLine("Connected to: " + BASE_URL);
-            token = StartSession().GetAwaiter().GetResult();
-            if (!String.IsNullOrEmpty(token))
-            {
-                ClientMenu();
-            }
-            else
-            {
-                Console.WriteLine("Could not login to account. Please restart CLTrader and try again.");
-            }
+            StartupMenu();
         }
 
         public static async Task<string> StartSession()
@@ -61,6 +55,85 @@ namespace CLTrader
             var responseJson = JsonConvert.DeserializeObject<LoginOutput>(responseString);
             string userToken = responseJson.Token;
             return userToken;
+        }
+
+        public static void StartupMenu()
+        {
+            Console.WriteLine("1. Login");
+            Console.WriteLine("2. Create new account");
+            Console.WriteLine("3. Exit");
+            Console.WriteLine();
+            Console.Write("Enter selection: ");
+            string input = Console.ReadLine();
+
+            switch (input)
+            {
+                case "1":
+                    token = StartSession().GetAwaiter().GetResult();
+                    ClientMenu();
+                    break;
+                case "2":
+                    CreateNewAccount();
+                    break;
+                case "3":
+                    break;
+                default:
+                    Console.WriteLine("Please enter a valid selection (1 - 3)");
+                    StartupMenu();
+                    break;
+            }
+
+        }
+
+        public static void CreateNewAccount()
+        {
+            Console.Write("Enter username: ");
+            string username = Console.ReadLine();
+            Console.Write("Enter password: ");
+            string password = Console.ReadLine();
+
+
+            LoginInput loginInput = new LoginInput()
+            {
+                username = username,
+                password = password
+            };
+
+            try
+            {
+                var client = new HttpClient();
+                client.BaseAddress = new Uri(BASE_URL);
+                var request = new HttpRequestMessage(HttpMethod.Post, "/api/Users/Register");
+                string jsonRequest = JsonConvert.SerializeObject(loginInput);
+                var stringContent = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+                request.Content = stringContent;
+                var response = client.SendAsync(request).GetAwaiter().GetResult();
+                var responseString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var responseJson = JsonConvert.DeserializeObject<StatusOutput>(responseString);
+
+                Console.WriteLine(responseJson.message);
+                if (responseJson.message == "User created")
+                {
+                    Console.WriteLine("Login to your newly created account");
+                    token = StartSession().GetAwaiter().GetResult();
+                    ClientMenu();
+                }
+                else if (responseJson.message == "User already exists")
+                {
+                    Console.WriteLine("Please try again with a different username");
+                    CreateNewAccount();
+                }
+                else
+                {
+                    Console.WriteLine("An error occured while trying to create an account, please try again");
+                    CreateNewAccount();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         public static void ClientMenu()
@@ -150,7 +223,7 @@ namespace CLTrader
                 Console.WriteLine("===========================================");
                 Console.WriteLine("LATEST PRICE QUOTE");
                 Console.Write("Enter symbol: ");
-                string input = Console.ReadLine();
+                string input = Console.ReadLine().ToUpper();
                 var client = new HttpClient();
                 var response = client.GetAsync(BASE_URL + "/api/Quotes/LatestPrice/" + input);
                 var responseString = response.Result.Content.ReadAsStringAsync();
@@ -178,7 +251,7 @@ namespace CLTrader
                 Console.WriteLine("===========================================");
                 Console.WriteLine("SMART PRICE QUOTE");
                 Console.Write("Enter symbol: ");
-                string input = Console.ReadLine();
+                string input = Console.ReadLine().ToUpper();
                 var client = new HttpClient();
                 var response = client.GetAsync(BASE_URL + "/api/Quotes/SmartQuote/" + input);
                 var responseString = response.Result.Content.ReadAsStringAsync();
@@ -207,7 +280,7 @@ namespace CLTrader
                 Console.WriteLine("===========================================");
                 Console.WriteLine("EQUITY/ETF RESEARCH");
                 Console.Write("Enter symbol: ");
-                string input = Console.ReadLine();
+                string input = Console.ReadLine().ToUpper();
                 var client = new HttpClient();
                 var response = client.GetAsync(BASE_URL + "/api/Quotes/DetailedQuote/" + input + "/1day");
                 var responseString = response.Result.Content.ReadAsStringAsync();
@@ -242,9 +315,9 @@ namespace CLTrader
                 Console.WriteLine("===========================================");
                 Console.WriteLine("EXECUTE TRADE - PLACE ORDER");
                 Console.Write("Enter symbol: ");
-                string symbol = Console.ReadLine();
+                string symbol = Console.ReadLine().ToUpper();
                 Console.Write("Order type (BUY/SELL/SELLSHORT): ");
-                string orderType = Console.ReadLine();
+                string orderType = Console.ReadLine().ToUpper();
                 Console.Write("Quantity: ");
                 string quantity = Console.ReadLine();
 
@@ -267,7 +340,7 @@ namespace CLTrader
                     TradeExecInput tradeExecInput = new TradeExecInput()
                     {
                         Token = token,
-                        Symbol = symbol,
+                        Symbol = symbol.ToUpper(),
                         Quantity = Int32.Parse(quantity),
                         Type = orderType
                     };
@@ -424,6 +497,19 @@ namespace CLTrader
                 ClientMenu();
             }
         }
+
+        public static string GetActiveAppServer()
+        {
+            var client = new HttpClient();
+            var response = client.GetAsync("https://commandcenter.pseudomarkets.live" + "/api/ServerPool");
+            var responseString = response.Result.Content.ReadAsStringAsync();
+            var responseJson = JsonConvert.DeserializeObject<ServerPoolList>(responseString.Result);
+
+            var activeServer = responseJson.ServerList
+                .First(x => x.ActiveCluster == true && x.IsFailover == false).Address;
+
+            return activeServer;
+        }
     }
 
     public class LoginOutput
@@ -536,4 +622,25 @@ namespace CLTrader
         public DateTime Date { get; set; }
         public string TransactionID { get; set; }
     }
+
+
+    public class ServerPoolList
+    {
+        public List<ServerPool> ServerList { get; set; }
+    }
+
+    public class ServerPool
+    {
+        public int Id { get; set; }
+        public string ServerName { get; set; }
+        public string Address { get; set; }
+        public bool ActiveCluster { get; set; }
+        public bool IsFailover { get; set; }
+    }
+
+    public class StatusOutput
+    {
+        public string message { get; set; }
+    }
+
 }
