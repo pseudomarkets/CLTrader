@@ -21,7 +21,7 @@ namespace CLTrader
         public static string BASE_URL = "";
         private static string username = "";
         private static string token = "";
-        private static string VERSION_STRING = "1.0.3";
+        private static string VERSION_STRING = "1.0.4";
         public static void Main(string[] args)
         {
             Console.WriteLine(FiggleFonts.Standard.Render("CLTrader"));
@@ -354,14 +354,14 @@ namespace CLTrader
                     var responseString = response.Result.Content.ReadAsStringAsync();
                     var responseJson = JsonConvert.DeserializeObject<TradeExecOutput>(responseString.Result);
                     Console.WriteLine("===========================================");
-                    Console.WriteLine("ORDER SUCCESSFULLY EXECUTED");
-                    Console.WriteLine("SYMBOL: " + responseJson.Symbol);
-                    Console.WriteLine("PRICE: $" + responseJson.Price);
-                    Console.WriteLine("QUANTITY: " + responseJson.Quantity);
-                    Console.WriteLine("ORDER TYPE: " + responseJson.Type);
-                    Console.WriteLine("ORDER ID: " + responseJson.Id);
-                    Console.WriteLine("TRANSACTION ID: " + responseJson.TransactionID);
-                    Console.WriteLine("ORDER DATE: " + responseJson.Date);
+                    Console.WriteLine("ORDER STATUS: " + responseJson?.Status?.ToUpper());
+                    Console.WriteLine("SYMBOL: " + responseJson?.Order?.Symbol);
+                    Console.WriteLine("PRICE: $" + responseJson?.Order?.Price);
+                    Console.WriteLine("QUANTITY: " + responseJson?.Order?.Quantity);
+                    Console.WriteLine("ORDER TYPE: " + responseJson?.Order?.Type);
+                    Console.WriteLine("ORDER ID: " + responseJson?.Order?.Id);
+                    Console.WriteLine("TRANSACTION ID: " + responseJson?.Order?.TransactionID);
+                    Console.WriteLine("ORDER DATE: " + responseJson?.Order?.Date);
                     Console.WriteLine("===========================================");
                     Console.WriteLine("Enter to return back to menu...");
                     Console.ReadKey();
@@ -574,7 +574,7 @@ namespace CLTrader
         public string Type { get; set; }
     }
 
-    public class TradeExecOutput
+    public class Orders
     {
         public int Id { get; set; }
         public string Symbol { get; set; }
@@ -641,6 +641,12 @@ namespace CLTrader
     public class StatusOutput
     {
         public string message { get; set; }
+    }
+
+    public class TradeExecOutput
+    {
+        public string Status { get; set; }
+        public Orders Order { get; set; }
     }
 
 }
